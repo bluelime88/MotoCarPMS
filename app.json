@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "MotoCar PMS",
+    "slug": "MotoCarPMS",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/logo.png",
+    "scheme": "motocarpms",
+    "userInterfaceStyle": "light",
+    "android": {
+      "package": "com.josenies.motocarpms",
+      "adaptiveIcon": {
+        "backgroundColor": "#faf8ff",
+        "foregroundImage": "./assets/images/logo.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/logo.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#faf8ff",
+          "image": "./assets/images/logo.png",
+          "imageWidth": 160
+        }
+      ],
+      "@react-native-community/datetimepicker"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}
