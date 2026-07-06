@@ -1,56 +1,60 @@
-# Welcome to your Expo app 👋
+# MotoCar PMS
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A mobile-first, **local-first** app for tracking Preventive Maintenance Services (PMS) for cars and motorcycles. Log service history, track expenses, and stay ahead of upcoming maintenance — no account or internet required, all data stays on the device.
 
-## Get started
+Built with Expo (SDK 54) + React Native, Material Design 3 styling, light/dark themes.
 
-1. Install dependencies
+## Features
 
-   ```bash
-   npm install
-   ```
+- **Vehicles** — add/edit cars & motorcycles with photos; live health status (Healthy / Due Soon / Overdue) from mileage or time.
+- **Maintenance log** — record service type, odometer, workshop, and parts/labor cost; attach **receipt** and **service** photos; month-grouped timeline with per-type filters.
+- **Upcoming schedule** — Reminders screen lists all scheduled services (overdue, due-soon, and future) with absolute due dates, plus a week strip marking due days. Optional local notifications.
+- **Expense analytics** — spend auto-computed from records: year/avg/month stats, monthly trend, by-category and top-vehicle charts, recent logs.
+- **Settings** — currency, km/mi units, dark mode, CSV export, contact developer, reset data.
+- **Validation** — required-field alerts on all add/edit forms, email/plate/number formatting.
 
-2. Start the app
+See [`docs/PRD.md`](docs/PRD.md) for the full product requirements and roadmap.
 
-   ```bash
-   npx expo start
-   ```
+## Tech stack
 
-In the output, you'll find options to open the app in a
+- Expo SDK 54, React Native 0.81, React 19 (React Compiler)
+- `expo-router` (file-based, typed routes), TypeScript
+- `@react-native-async-storage/async-storage` (local persistence)
+- `expo-image-picker` / `expo-image`, `expo-notifications`, `expo-file-system` + `expo-sharing`
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Getting started
 
 ```bash
-npm run reset-project
+npm install
+npx expo start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Then open on an Android device/emulator, iOS simulator, or the web preview.
 
-### Other setup steps
+Pure functions have runnable self-checks (no test framework):
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+```bash
+npx tsx src/lib/status.ts     # reminders / expense math
+npx tsx src/lib/validate.ts   # input validation
+npx tsc --noEmit              # type check
+```
 
-## Learn more
+## Builds (EAS)
 
-To learn more about developing your project with Expo, look at the following resources:
+```bash
+eas build --profile preview --platform android      # internal APK
+eas build --profile production --platform android   # store app-bundle
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Project structure
 
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```
+src/
+  app/            # expo-router screens
+    (tabs)/       # Dashboard, Vehicles, Maintenance, Expenses, Profile
+    vehicle/      # add/edit + detail
+    maintenance/  # add service record
+    reminders.tsx # upcoming schedule
+  components/      # shared UI primitives
+  lib/            # storage, status logic, theme, validation, helpers
+```
