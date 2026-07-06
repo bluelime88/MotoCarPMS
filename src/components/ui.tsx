@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useApp } from '@/lib/app';
+import { numeric } from '@/lib/validate';
 import { radius, space, type } from '@/lib/theme';
 import type { Palette } from '@/lib/theme';
 import type { Health } from '@/lib/status';
@@ -114,6 +115,8 @@ export function Field({
   placeholder,
   multiline,
   autoCapitalize,
+  decimal,
+  error,
 }: {
   label: string;
   value: string;
@@ -122,22 +125,32 @@ export function Field({
   placeholder?: string;
   multiline?: boolean;
   autoCapitalize?: 'none' | 'characters' | 'sentences';
+  decimal?: boolean; // numeric only: allow a single decimal point
+  error?: string; // shown in red below the field when non-empty
 }) {
   const { colors } = useApp();
   const styles = useStyles();
+  // Numeric fields only accept digits (+ one dot when decimal); reject everything else as typed.
+  const handleChange = (t: string) =>
+    onChangeText(keyboardType === 'numeric' ? numeric(t, decimal) : t);
   return (
     <View style={{ gap: space.xs }}>
       <Text style={[type.labelLg, { color: colors.onSurfaceVariant }]}>{label}</Text>
       <TextInput
         value={value}
-        onChangeText={onChangeText}
+        onChangeText={handleChange}
         keyboardType={keyboardType}
         placeholder={placeholder}
         placeholderTextColor={colors.outline}
         multiline={multiline}
         autoCapitalize={autoCapitalize}
-        style={[styles.input, multiline ? { height: 88, textAlignVertical: 'top' } : null]}
+        style={[
+          styles.input,
+          multiline ? { height: 88, textAlignVertical: 'top' } : null,
+          error ? { borderColor: colors.error } : null,
+        ]}
       />
+      {error ? <Text style={[type.labelSm, { color: colors.error }]}>{error}</Text> : null}
     </View>
   );
 }

@@ -4,7 +4,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EmptyState, ScreenHeader } from '@/components/ui';
 import { useApp } from '@/lib/app';
-import { upcomingReminders, type Reminder } from '@/lib/status';
+import { scheduledServices, type Reminder } from '@/lib/status';
 import { radius, space, type, type Palette } from '@/lib/theme';
 import { useData } from '@/lib/useData';
 
@@ -20,7 +20,7 @@ export default function Reminders() {
   const { colors, unit, kmToDisplay } = useApp();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { vehicles, records } = useData();
-  const reminders = upcomingReminders(vehicles, records);
+  const reminders = scheduledServices(vehicles, records);
 
   const subtitle = (r: Reminder): string => {
     if (r.health === 'overdue') {
@@ -32,6 +32,17 @@ export default function Reminders() {
     if (r.kmLeft != null) return `Due in ${kmToDisplay(r.kmLeft)} ${unit}`;
     return 'Upcoming';
   };
+
+  // Absolute target ("Jun 1, 2026 · 55,000 km") so the list reads as a real schedule.
+  const dueTarget = (r: Reminder): string => {
+    const parts: string[] = [];
+    if (r.dueDate) parts.push(new Date(r.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }));
+    if (r.dueMileage != null) parts.push(`${kmToDisplay(r.dueMileage).toLocaleString()} ${unit}`);
+    return parts.join(' · ');
+  };
+
+  const hasDueOn = (d: Date) =>
+    reminders.some((r) => r.dueDate && new Date(r.dueDate).toDateString() === d.toDateString());
 
   const today = new Date();
   const week = Array.from({ length: 7 }, (_, i) => {
@@ -58,13 +69,19 @@ export default function Reminders() {
                 <Text style={[type.titleMd, { color: isToday ? colors.onPrimary : colors.onSurface }]}>
                   {d.getDate()}
                 </Text>
+                <View
+                  style={[
+                    styles.dueDot,
+                    { backgroundColor: isToday ? colors.onPrimary : colors.primary, opacity: hasDueOn(d) ? 1 : 0 },
+                  ]}
+                />
               </View>
             );
           })}
         </View>
 
         {reminders.length === 0 ? (
-          <EmptyState icon="notifications-none" text="No upcoming or overdue services. You're all caught up!" />
+          <EmptyState icon="event-available" text="No services scheduled yet. Set a next service due when logging maintenance." />
         ) : (
           reminders.map((r) => {
             const s = colors.status[r.health];
@@ -76,6 +93,12 @@ export default function Reminders() {
                     <Text style={[type.bodyMd, { color: colors.onSurfaceVariant }]}>
                       {r.vehicle.brand} {r.vehicle.model}
                     </Text>
+                    {dueTarget(r) ? (
+                      <View style={styles.dueRow}>
+                        <MaterialIcons name="event" size={13} color={colors.onSurfaceVariant} />
+                        <Text style={[type.labelSm, { color: colors.onSurfaceVariant }]}>{dueTarget(r)}</Text>
+                      </View>
+                    ) : null}
                   </View>
                   <View style={[styles.badge, { backgroundColor: s.bg }]}>
                     <MaterialIcons name={r.health === 'overdue' ? 'warning' : 'schedule'} size={14} color={s.fg} />
@@ -108,6 +131,8 @@ const makeStyles = (colors: Palette) =>
       backgroundColor: colors.surfaceContainer,
     },
     dayActive: { backgroundColor: colors.primary },
+    dueDot: { width: 5, height: 5, borderRadius: 2.5 },
+    dueRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
     card: {
       backgroundColor: colors.surfaceContainerLowest,
       borderRadius: radius.lg,

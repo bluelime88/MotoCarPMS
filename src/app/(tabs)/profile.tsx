@@ -1,7 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Field, ScreenHeader, Select } from '@/components/ui';
 import { useApp } from '@/lib/app';
@@ -10,6 +10,7 @@ import { requestPermission } from '@/lib/notify';
 import { pickImage } from '@/lib/photo';
 import { clearData } from '@/lib/storage';
 import { radius, space, type, type Palette } from '@/lib/theme';
+import { isEmail } from '@/lib/validate';
 
 const CURRENCIES = [
   { label: '₱  Philippine Peso', sym: '₱' },
@@ -24,12 +25,22 @@ export default function ProfileScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [name, setName] = useState(profile.name);
   const [email, setEmail] = useState(profile.email);
-  const [budget, setBudget] = useState(String(profile.budget));
 
-  const dirty = name !== profile.name || email !== profile.email || Number(budget) !== profile.budget;
+  const emailError = email.trim() && !isEmail(email.trim()) ? 'Enter a valid email address' : '';
+  const dirty = name !== profile.name || email !== profile.email;
 
   const saveDetails = async () => {
-    await setProfile({ name: name.trim() || 'Rider', email: email.trim(), budget: Number(budget) || 0 });
+    const missing: string[] = [];
+    if (!name.trim()) missing.push('Name');
+    if (missing.length) {
+      Alert.alert('Missing required fields', `Please fill in: ${missing.join(', ')}.`);
+      return;
+    }
+    if (emailError) {
+      Alert.alert('Invalid email', 'Please enter a valid email address.');
+      return;
+    }
+    await setProfile({ name: name.trim(), email: email.trim() });
     Alert.alert('Saved', 'Your profile has been updated.');
   };
 
@@ -68,6 +79,15 @@ export default function ProfileScreen() {
       },
     ]);
 
+  const contactDeveloper = async () => {
+    const url = 'mailto:josenies@gmail.com?subject=' + encodeURIComponent('MotoCar PMS app - Feedback');
+    try {
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert('No email app', 'Set up an email account on this device to send feedback.');
+    }
+  };
+
   const currencyLabel = CURRENCIES.find((c) => c.sym === profile.currency)?.label ?? CURRENCIES[0].label;
 
   return (
@@ -94,8 +114,7 @@ export default function ProfileScreen() {
         {/* Account */}
         <View style={styles.section}>
           <Field label="Name" value={name} onChangeText={setName} />
-          <Field label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" />
-          <Field label={`Monthly Budget (${profile.currency})`} value={budget} onChangeText={setBudget} keyboardType="numeric" />
+          <Field label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" error={emailError} />
           {dirty ? (
             <Pressable style={styles.saveBtn} onPress={saveDetails}>
               <Text style={[type.labelLg, { color: colors.onPrimary }]}>Save Profile</Text>
@@ -149,6 +168,14 @@ export default function ProfileScreen() {
             <MaterialIcons name="delete-forever" size={22} color={colors.error} />
             <Text style={[type.titleMd, { color: colors.error, flex: 1 }]}>Reset all data</Text>
             <MaterialIcons name="chevron-right" size={22} color={colors.error} />
+          </Pressable>
+        </View>
+
+        <View style={styles.section}>
+          <Pressable style={styles.actionRow} onPress={contactDeveloper}>
+            <MaterialIcons name="mail-outline" size={22} color={colors.primary} />
+            <Text style={[type.titleMd, { color: colors.onSurface, flex: 1 }]}>Contact the Developer</Text>
+            <MaterialIcons name="chevron-right" size={22} color={colors.onSurfaceVariant} />
           </Pressable>
         </View>
 

@@ -1,5 +1,5 @@
 // Global settings context: active palette (light/dark), currency + distance-unit
-// formatting, budget, and a persisted profile setter. Wrap the app in <AppProvider>.
+// formatting, and a persisted profile setter. Wrap the app in <AppProvider>.
 import { createContext, useContext, useEffect, useState } from 'react';
 import { getProfile, saveProfile, type Profile } from './storage';
 import { darkColors, lightColors, type Palette } from './theme';
@@ -26,7 +26,6 @@ const DEFAULTS: Profile = {
   notificationsEnabled: false,
   currency: '₱',
   distanceUnit: 'km',
-  budget: 5000,
   theme: 'light',
 };
 

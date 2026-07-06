@@ -26,7 +26,6 @@ export default function Dashboard() {
   const next: Reminder | undefined = reminders.find((r) => r.health === 'due') ?? reminders[0];
   const month = new Date().toISOString().slice(0, 7);
   const spent = monthlyExpense(records, month);
-  const budget = profile.budget || 1;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -131,23 +130,21 @@ export default function Dashboard() {
           )}
         </View>
 
-        <View style={styles.expense}>
+        <Pressable style={styles.expense} onPress={() => router.push('/expenses')}>
           <View style={styles.rowBetween}>
             <Text style={[type.titleMd, { color: colors.onSurface }]}>Monthly Expenses</Text>
             <Text style={[type.headlineSm, { color: colors.primary }]}>{money(spent)}</Text>
           </View>
-          <View style={{ gap: space.sm, marginTop: space.md }}>
-            <View style={styles.rowBetween}>
-              <Text style={[type.labelSm, { color: colors.onSurfaceVariant }]}>Budget Usage</Text>
-              <Text style={[type.labelSm, { color: colors.onSurfaceVariant }]}>
-                {money(spent)} / {money(profile.budget)}
-              </Text>
-            </View>
-            <View style={styles.track}>
-              <View style={[styles.fill, { width: `${Math.min(100, (spent / budget) * 100)}%` }]} />
+          <View style={[styles.rowBetween, { marginTop: space.sm }]}>
+            <Text style={[type.labelSm, { color: colors.onSurfaceVariant }]}>
+              From maintenance records this month
+            </Text>
+            <View style={styles.row}>
+              <Text style={[type.labelLg, { color: colors.primary }]}>View analytics</Text>
+              <MaterialIcons name="chevron-right" size={18} color={colors.primary} />
             </View>
           </View>
-        </View>
+        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
@@ -212,6 +209,4 @@ const makeStyles = (colors: Palette) =>
       borderLeftWidth: 4,
     },
     expense: { backgroundColor: colors.surfaceContainerHigh, borderRadius: radius.lg, padding: space.md },
-    track: { height: 8, borderRadius: radius.pill, backgroundColor: colors.outlineVariant, overflow: 'hidden' },
-    fill: { height: 8, borderRadius: radius.pill, backgroundColor: colors.primary },
   });

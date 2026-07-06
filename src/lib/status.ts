@@ -50,8 +50,9 @@ export function vehicleStatus(
   return overdue ? 'overdue' : soon ? 'due' : 'good';
 }
 
-// Overdue + due-soon services across the fleet, most urgent first.
-export function upcomingReminders(
+// Every vehicle's active next-service target (its most recent record carrying one),
+// soonest/most-urgent first. Includes far-future ('good') services — the full schedule.
+export function scheduledServices(
   vehicles: Vehicle[],
   records: MaintenanceRecord[],
   now: number = Date.now()
@@ -60,12 +61,10 @@ export function upcomingReminders(
   for (const vehicle of vehicles) {
     const due = latestDue(records.filter((r) => r.vehicleId === vehicle.id));
     if (!due) continue;
-    const health = vehicleStatus(vehicle, records, now);
-    if (health === 'good') continue;
     out.push({
       vehicle,
       record: due,
-      health,
+      health: vehicleStatus(vehicle, records, now),
       dueDate: due.nextDueDate,
       dueMileage: due.nextDueMileage,
       daysLeft: due.nextDueDate
@@ -80,6 +79,15 @@ export function upcomingReminders(
   );
 }
 
+// Only services needing attention now (due soon or overdue) — dashboard hero + bell badge.
+export function upcomingReminders(
+  vehicles: Vehicle[],
+  records: MaintenanceRecord[],
+  now: number = Date.now()
+): Reminder[] {
+  return scheduledServices(vehicles, records, now).filter((r) => r.health !== 'good');
+}
+
 export const recordCost = (r: MaintenanceRecord) => r.partsCost + r.laborCost;
 
 // Total spend for a given month ('yyyy-mm'), or all-time if omitted.
@@ -87,6 +95,38 @@ export function monthlyExpense(records: MaintenanceRecord[], month?: string): nu
   return records
     .filter((r) => !month || r.date.startsWith(month))
     .reduce((sum, r) => sum + recordCost(r), 0);
+}
+
+// Spend per calendar month of `year` ('yyyy') → 12 numbers, Jan..Dec.
+export function expenseByMonth(records: MaintenanceRecord[], year: string): number[] {
+  const out = Array(12).fill(0);
+  for (const r of records) {
+    if (r.date.startsWith(year + '-')) out[Number(r.date.slice(5, 7)) - 1] += recordCost(r);
+  }
+  return out;
+}
+
+// Total spend grouped by record type, highest first.
+export function expenseByCategory(records: MaintenanceRecord[]): { label: string; total: number }[] {
+  const map = new Map<string, number>();
+  for (const r of records) {
+    const k = r.type || 'Other';
+    map.set(k, (map.get(k) ?? 0) + recordCost(r));
+  }
+  return [...map].map(([label, total]) => ({ label, total })).sort((a, b) => b.total - a.total);
+}
+
+// Total spend grouped by vehicle, highest first (joined for labels).
+export function expenseByVehicle(
+  records: MaintenanceRecord[],
+  vehicles: Vehicle[]
+): { vehicle: Vehicle; total: number }[] {
+  const map = new Map<string, number>();
+  for (const r of records) map.set(r.vehicleId, (map.get(r.vehicleId) ?? 0) + recordCost(r));
+  return [...map]
+    .map(([id, total]) => ({ vehicle: vehicles.find((v) => v.id === id), total }))
+    .filter((x): x is { vehicle: Vehicle; total: number } => !!x.vehicle)
+    .sort((a, b) => b.total - a.total);
 }
 
 export function costSplit(records: MaintenanceRecord[]): { parts: number; labor: number } {
@@ -134,10 +174,20 @@ export function demo() {
   assert(monthlyExpense(recs, '2025-12') === 120, 'month total');
   assert(monthlyExpense(recs) === 220, 'all-time total');
   assert(costSplit(recs).parts === 180, 'parts split');
+  assert(expenseByMonth(recs, '2025')[11] === 120 && expenseByMonth(recs, '2025')[10] === 100, 'by month');
+  const byCat = expenseByCategory(recs);
+  assert(byCat[0].label === 'Oil' && byCat[0].total === 220, 'by category');
+  assert(expenseByVehicle(recs, [car])[0].total === 220, 'by vehicle');
 
   // Reminders sorted overdue-first.
   const rem = upcomingReminders(car ? [car] : [], [{ ...base, nextDueDate: '2025-12-15' }], now);
   assert(rem.length === 1 && rem[0].health === 'overdue', 'reminder overdue');
+
+  // Full schedule includes far-future ('good') services; upcomingReminders excludes them.
+  const future = [{ ...base, nextDueDate: '2026-06-01' }];
+  assert(scheduledServices([car], future, now).length === 1, 'schedule includes future');
+  assert(scheduledServices([car], future, now)[0].health === 'good', 'future is good');
+  assert(upcomingReminders([car], future, now).length === 0, 'upcoming excludes future');
 
   console.log('status.ts demo: all assertions passed');
 }

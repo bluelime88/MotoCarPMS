@@ -1,11 +1,14 @@
+import { MaterialIcons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { DateField, Field, PrimaryButton, ScreenHeader, Select } from '@/components/ui';
 import { useApp } from '@/lib/app';
 import { MAINTENANCE_TYPES } from '@/lib/constants';
 import { cancel, scheduleDue } from '@/lib/notify';
+import { pickImage } from '@/lib/photo';
 import {
   getProfile,
   getVehicles,
@@ -52,8 +55,16 @@ export default function AddRecord() {
   const selected = vehicles.find((v) => v.id === r.vehicleId);
 
   const submit = async () => {
-    if (!r.vehicleId) {
+    if (vehicles.length === 0) {
       Alert.alert('No vehicle', 'Add a vehicle first, then log its service.');
+      return;
+    }
+    const missing: string[] = [];
+    if (!r.vehicleId) missing.push('Vehicle');
+    // Next service due: either field is optional on its own, but at least one is required.
+    if (!r.nextDueDate && !dueKm.trim()) missing.push('Next Service Due (due date or mileage)');
+    if (missing.length) {
+      Alert.alert('Missing required fields', `Please fill in: ${missing.join(', ')}.`);
       return;
     }
     const record: MaintenanceRecord = {
@@ -107,15 +118,18 @@ export default function AddRecord() {
 
         <View style={styles.row}>
           <View style={{ flex: 1 }}>
-            <Field label={`Parts Cost (${profile.currency})`} value={parts} onChangeText={setParts} keyboardType="numeric" placeholder="0" />
+            <Field label={`Parts Cost (${profile.currency})`} value={parts} onChangeText={setParts} keyboardType="numeric" decimal placeholder="0" />
           </View>
           <View style={{ flex: 1 }}>
-            <Field label={`Labor Cost (${profile.currency})`} value={labor} onChangeText={setLabor} keyboardType="numeric" placeholder="0" />
+            <Field label={`Labor Cost (${profile.currency})`} value={labor} onChangeText={setLabor} keyboardType="numeric" decimal placeholder="0" />
           </View>
         </View>
 
         <View style={styles.nextCard}>
-          <Text style={[type.titleMd, { color: colors.onSurface }]}>Next Service Due (optional)</Text>
+          <Text style={[type.titleMd, { color: colors.onSurface }]}>Next Service Due</Text>
+          <Text style={[type.labelSm, { color: colors.onSurfaceVariant }]}>
+            Enter at least a due date or due mileage.
+          </Text>
           <View style={styles.row}>
             <DateField label="Due Date" value={r.nextDueDate ?? ''} onChange={(d) => set({ nextDueDate: d })} />
             <View style={{ flex: 1 }}>
@@ -124,9 +138,74 @@ export default function AddRecord() {
           </View>
         </View>
 
+        <Text style={[type.titleMd, { color: colors.onSurface }]}>Attachments (optional)</Text>
+        <View style={styles.row}>
+          <UploadCard
+            uri={r.receiptUri}
+            icon="receipt-long"
+            tint={colors.primary}
+            label="Receipt Photo"
+            hint="Proof of payment"
+            onPick={(uri) => set({ receiptUri: uri })}
+            onClear={() => set({ receiptUri: undefined })}
+          />
+          <UploadCard
+            uri={r.servicePhotoUri}
+            icon="photo-camera"
+            tint={colors.secondary}
+            label="Service Photo"
+            hint="Work performed"
+            onPick={(uri) => set({ servicePhotoUri: uri })}
+            onClear={() => set({ servicePhotoUri: undefined })}
+          />
+        </View>
+
         <PrimaryButton label="Save Record" icon="check" onPress={submit} />
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function UploadCard({
+  uri,
+  icon,
+  tint,
+  label,
+  hint,
+  onPick,
+  onClear,
+}: {
+  uri?: string;
+  icon: keyof typeof MaterialIcons.glyphMap;
+  tint: string;
+  label: string;
+  hint: string;
+  onPick: (uri: string) => void;
+  onClear: () => void;
+}) {
+  const { colors } = useApp();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const pick = async () => {
+    const picked = await pickImage();
+    if (picked) onPick(picked);
+  };
+  return (
+    <Pressable style={styles.upload} onPress={pick}>
+      {uri ? (
+        <>
+          <Image source={{ uri }} style={styles.uploadImg} contentFit="cover" />
+          <Pressable style={styles.uploadClear} onPress={onClear} hitSlop={8}>
+            <MaterialIcons name="close" size={16} color={colors.onError} />
+          </Pressable>
+        </>
+      ) : (
+        <>
+          <MaterialIcons name={icon} size={40} color={tint} />
+          <Text style={[type.labelLg, { color: colors.onSurface }]}>{label}</Text>
+          <Text style={[type.labelSm, { color: colors.outline }]}>{hint}</Text>
+        </>
+      )}
+    </Pressable>
   );
 }
 
@@ -136,4 +215,29 @@ const makeStyles = (colors: Palette) =>
     body: { padding: space.md, gap: space.md, paddingBottom: space.xl },
     row: { flexDirection: 'row', gap: space.md },
     nextCard: { backgroundColor: colors.surfaceContainer, borderRadius: radius.lg, padding: space.md, gap: space.md },
+    upload: {
+      flex: 1,
+      height: 150,
+      borderRadius: radius.lg,
+      borderWidth: 1.5,
+      borderStyle: 'dashed',
+      borderColor: colors.outlineVariant,
+      backgroundColor: colors.surfaceContainerLow,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: space.xs,
+      overflow: 'hidden',
+    },
+    uploadImg: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
+    uploadClear: {
+      position: 'absolute',
+      top: space.sm,
+      right: space.sm,
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      backgroundColor: colors.error,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
   });

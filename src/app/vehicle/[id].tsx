@@ -1,8 +1,8 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EmptyState, Fab, StatusChip } from '@/components/ui';
 import { useApp } from '@/lib/app';
@@ -21,6 +21,7 @@ export default function VehicleDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { vehicles, records } = useData();
   const vehicle = vehicles.find((v) => v.id === id);
+  const [zoomUri, setZoomUri] = useState<string | null>(null);
 
   if (!vehicle) {
     return (
@@ -123,6 +124,15 @@ export default function VehicleDetail() {
                 <Text style={[type.labelSm, { color: colors.onSurfaceVariant }]}>
                   {new Date(r.date).toLocaleDateString()} · {formatDistance(r.odometer)}
                 </Text>
+                {r.receiptUri || r.servicePhotoUri ? (
+                  <View style={styles.thumbs}>
+                    {[r.receiptUri, r.servicePhotoUri].filter(Boolean).map((uri) => (
+                      <Pressable key={uri} onPress={() => setZoomUri(uri!)}>
+                        <Image source={{ uri }} style={styles.thumb} contentFit="cover" />
+                      </Pressable>
+                    ))}
+                  </View>
+                ) : null}
               </View>
               <Text style={[type.titleMd, { color: colors.onSurface }]}>{money(recordCost(r))}</Text>
             </View>
@@ -130,6 +140,15 @@ export default function VehicleDetail() {
         )}
       </ScrollView>
       <Fab onPress={() => router.push(`/maintenance/add?vehicleId=${vehicle.id}`)} />
+
+      <Modal visible={!!zoomUri} transparent animationType="fade" onRequestClose={() => setZoomUri(null)}>
+        <Pressable style={styles.viewer} onPress={() => setZoomUri(null)}>
+          {zoomUri ? <Image source={{ uri: zoomUri }} style={styles.viewerImg} contentFit="contain" /> : null}
+          <Pressable style={styles.viewerClose} onPress={() => setZoomUri(null)} hitSlop={8}>
+            <MaterialIcons name="close" size={26} color="#fff" />
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -194,4 +213,9 @@ const makeStyles = (colors: Palette) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
+    thumbs: { flexDirection: 'row', gap: space.sm, marginTop: space.xs },
+    thumb: { width: 44, height: 44, borderRadius: radius.sm },
+    viewer: { flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', alignItems: 'center', justifyContent: 'center' },
+    viewerImg: { width: '100%', height: '100%' },
+    viewerClose: { position: 'absolute', top: space.xl, right: space.md, padding: space.sm },
   });

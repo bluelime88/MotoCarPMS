@@ -10,6 +10,7 @@ import { FUEL_TYPES, TRANSMISSIONS, VEHICLE_COLORS, YEARS } from '@/lib/constant
 import { pickImage } from '@/lib/photo';
 import { getVehicles, newId, saveVehicle, type Vehicle, type VehicleType } from '@/lib/storage';
 import { radius, space, type, type Palette } from '@/lib/theme';
+import { plate } from '@/lib/validate';
 
 const blank = (): Vehicle => ({
   id: newId(),
@@ -55,8 +56,11 @@ export default function AddVehicle() {
   };
 
   const submit = async () => {
-    if (!v.brand.trim() || !v.model.trim()) {
-      Alert.alert('Missing info', 'Brand and model are required.');
+    const missing: string[] = [];
+    if (!v.brand.trim()) missing.push('Brand');
+    if (!v.model.trim()) missing.push('Model');
+    if (missing.length) {
+      Alert.alert('Missing required fields', `Please fill in: ${missing.join(', ')}.`);
       return;
     }
     await saveVehicle({ ...v, odometer: displayToKm(Number(odo) || 0) });
@@ -109,7 +113,7 @@ export default function AddVehicle() {
             <Select label="Year" value={v.year} options={YEARS} onSelect={(y) => set({ year: y })} />
           </View>
           <View style={{ flex: 1 }}>
-            <Field label="Plate No." value={v.plate} onChangeText={(t) => set({ plate: t.toUpperCase() })} autoCapitalize="characters" />
+            <Field label="Plate No." value={v.plate} onChangeText={(t) => set({ plate: plate(t) })} autoCapitalize="characters" />
           </View>
         </View>
 

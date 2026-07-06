@@ -35,6 +35,8 @@ export type MaintenanceRecord = {
   nextDueDate?: string; // ISO yyyy-mm-dd
   nextDueMileage?: number;
   notificationId?: string; // scheduled local notification, if any
+  receiptUri?: string; // local uri of receipt photo
+  servicePhotoUri?: string; // local uri of service/work photo
   createdAt: number;
 };
 
@@ -45,7 +47,6 @@ export type Profile = {
   photoUri?: string;
   currency: string; // symbol, e.g. '₱'
   distanceUnit: 'km' | 'mi';
-  budget: number; // monthly, in `currency`
   theme: 'light' | 'dark';
 };
 
@@ -100,7 +101,6 @@ const DEFAULT_PROFILE: Profile = {
   notificationsEnabled: false,
   currency: '₱',
   distanceUnit: 'km',
-  budget: 5000,
   theme: 'light',
 };
 
